@@ -1,6 +1,6 @@
 ---
 title: "Week 1 Assignment: Basic R"
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Savannah Bennett; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -11,8 +11,7 @@ geometry: margin=2.54cm
 Week 1 Assignment introduces some of the basic features of the R computing environment (http://www.r-project.org).
 It is designed to be used along side your Week 1 Handout (hard copy). 
 You will not be able to complete the exercise if you do not have your handout.
-
-## Directions:
+I## Directions:
 1. Change "Student Name" on line 3 (above) with your name.
 2. Complete as much of the assignment as possible during class; what you do not complete in class will need to be done on your own outside of class.
 3. Use the handout as a guide; it contains a more complete description of data sets along with examples of proper scripting needed to carry out the exercise.
@@ -31,8 +30,7 @@ The completed exercise is due on **Wednesday, January 18^th^, 2017 before 12:00 
 
 ## 1) HOW WE WILL BE USING R AND OTHER TOOLS
 
-You are working in an RMarkdown (.Rmd) file.
-This allows you to integrate text and R code into a single document.
+You are working in an RMarkdown (.Rmd) file.gThis allows you to integrate text and R code into a single document.
 There are two major features to this document: 1) Markdown formatted text and 2) "chunks" of R code.
 Anything in an R code chunk will be interpreted by R when you *Knit* the document.
 
