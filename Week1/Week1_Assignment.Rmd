@@ -402,9 +402,11 @@ summary(reg7)
 summary(reg8)
 summary(reg9)
 
-#Cylopoid copepods (p=0.08, R-squared=0.086), Simocephallus (p=0.03, R-squared=0.18), and Chydorus (p=e2-16, R-squared= 0.96) are primarily responsible for the total zooplankton biomass. Chydorus explains a large amount of variation in the total zooplankton biomass. 
+
 
 ```
+>Cylopoid copepods (p=0.08, R-squared=0.086), Simocephallus (p=0.03, R-squared=0.18), and Chydorus (p=e2-16, R-squared= 0.96) are primarily responsible for the total zooplankton biomass. Chydorus explains a large amount of variation in the total zooplankton biomass. 
+
 
 ## SUBMITTING YOUR ASSIGNMENT
 Use Knitr to create a PDF of your completed Week1_Assignment.Rmd document, push the repo to GitHub, and create a pull request.
