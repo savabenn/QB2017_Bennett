@@ -139,7 +139,12 @@ In the R code chunk below, do the following:
 5. Calculate the coverage at that particular site
 
 ```{r}
-soilbac <- read.table("data/soilbac.txt", sep = "/t", header = TRUE, row.names = 1)
+soilbac <- read.table("data/soilbac.txt", sep = "\t", header = TRUE, row.names = 1)
+soilbac.t <- as.data.frame(t(soilbac))
+soilbac1 <- soilbac.t[1,]
+R <- function(x=""){rowSums(x>0*1)}
+O <- function(x="")
+
 
 
 
