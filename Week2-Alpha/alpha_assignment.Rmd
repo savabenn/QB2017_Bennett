@@ -1,6 +1,6 @@
 ---
 title: "Assignment: Local (alpha) Diversity"
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Savannah Bennett; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -35,7 +35,11 @@ In the R code chunk below, please provide the code to:
 4) Load the `vegan` R package (be sure to install if needed).
 
 ```{r}
-
+rm(list=ls())
+getwd()
+setwd("/Users/savabenn/GitHub/QB2017_Bennett/Week2-Alpha")
+install.packages("vegan")
+require("vegan")
 
 
 
@@ -48,6 +52,8 @@ In the R code chunk below, do the following:
 2) Display the structure of the dataset (if the structure is long, use `max.level=0` to show just basic information).
 
 ```{r}
+data(BCI)
+str(BCI, max.level=0)
 
 
 ```
@@ -72,12 +78,17 @@ In the R code chunk below, do the following:
 #   rowSums(     ) * 
 #   }
 
+S.obs <- function(x=""){rowSums(x>0*1)}
+S.obs(BCI) 
+specnumber(BCI)
+
+
 ```
 
 ***Question 1***: Does `specnumber()` from `vegan` return the same value for observed richness in `site1` as our function `S.obs`?
 What is the species richness of the first 4 sites (i.e., rows) of the BCI matrix?
 
-> ***Answer 1***:
+> ***Answer 1***:Yes, 'specnumber()' from 'vegan' and 'S.obs' both provide richness values of 93 species. 
 
 
 
@@ -90,6 +101,9 @@ In the R code chunk below, do the following:
 2. Use that function to calculate coverage for all sites in the BCI matrix.
 
 ```{r}
+C <- function(x= ""){1-(sum(x==1)/rowSums(x))}
+C(BCI)
+
 
 
 ```
@@ -125,6 +139,13 @@ In the R code chunk below, do the following:
 5. Calculate the coverage at that particular site
 
 ```{r}
+soilbac <- read.table("data/soilbac.txt", sep = "\t", header = TRUE, row.names = 1)
+soilbac.t <- as.data.frame(t(soilbac))
+soilbac1 <- soilbac.t[1,]
+R <- function(x=""){rowSums(x>0*1)}
+O <- function(x="")
+
+
 
 
 
