@@ -1,6 +1,6 @@
 ---
 title: "Assignment: Among Site (Beta) Diversity"
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Savannah Bennett; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -43,9 +43,9 @@ In the R code chunk below, provide the code to:
 4. load the `vegan` R package (be sure to install if needed).  
 
 ```{r}
-
-
-
+rm(list = ls())
+getwd()
+setwd("C:/Users/Savannah/GitHub/QB2017_Bennett/Week3-Beta")
 
 ```
 
@@ -57,8 +57,18 @@ In the R code chunk below, do the following:
 2. explore the structure of the dataset.
 
 ```{r}
+package.list <- c('vegan', 'ade4', 'viridis', 'gplots', 'BiodiversityR', 'indicspecies')
+for (package in package.list) {
+if (!require(package,character.only=T,quietly=T)) {
+install.packages(package)
+library(package,character.only=T)
+}
+}
 
-
+data(doubs)
+str(doubs,max.level =1)
+head(doubs$env)
+help(doubs)
 
 
 ```
@@ -69,9 +79,9 @@ a.  How many objects are in `doubs`?
 b.  How many fish species are there in the `doubs` dataset?
 c.  How many sites are in the `doubs` dataset?
 
-> ***Answer 1a***:  
-> ***Answer 1b***:  
-> ***Answer 1c***:  
+> ***Answer 1a***:There are 4 objects in the dataset. 
+> ***Answer 1b***:There are 27 fish species in the doubs dataset.
+> ***Answer 1c***:There are 30 sites in this dataset. 
 
 ### Visualizing the Doubs River Dataset
 
@@ -81,9 +91,9 @@ a.  How does fish richness vary along the sampled reach of the Doubs River?
 b.  How does Brown Trout (*Salmo trutta*) abundance vary along the sampled reach of the Doubs River?
 c.  What do these patterns say about the limitations of using richness when examining patterns of biodiversity?
 
-> ***Answer 2a***:  
-> ***Answer 2b***:  
-> ***Answer 2c***:  
+> ***Answer 2a***:Fish richness generally seems higher at the downstream site compared to the upstream site.   
+> ***Answer 2b***:Brown Trout abundance seeems higher at the upstream site compared to the downstream site. 
+> ***Answer 2c***:These patterns indicate that it is important to analyze species composition in addition to species richness. Richness alone should not be used to analyze diversity, because this metric may not be the best representation of the community or system (i.e. it may not accurately reflect community dynamics).
 
 ## 3) QUANTIFYING BETA-DIVERSITY
 
@@ -94,10 +104,41 @@ In the R code chunk below, do the following:
 
 ```{r}
 
+beta.w <-function(site.by.species =""){
+SbyS.pa <- decostand(site.by.species,method ="pa") 
+S <- ncol(SbyS.pa[,which(colSums(SbyS.pa) >0)]) 
+a.bar <- mean(specnumber(SbyS.pa)) 
+b.w <- round(S/a.bar,3) 
+return(b.w)
+}
 
+beta.w2 = function(site.by.species = "", sitenum1 = "", sitenum2 = "", pairwise = FALSE){
+  if (pairwise == TRUE){
+    if (sitenum1 == "" | sitenum2 == "") {
+      print("Error: please specify sites to compare") 
+      return(NA)}
+    site1 = site.by.species[sitenum1,]
+    site2 = site.by.species[sitenum2,]
+    site1 = subset(site1, select = site1 > 0)
+    site2 = subset(site2, select = site2 > 0)
+    gamma = union(colnames(site1), colnames(site2))
+    s = length(gamma)
+    a.bar = mean(c(specnumber(site1), specnumber(site2)))
+    b.w = round(s/a.bar - 1, 3)
+    return(b.w)
+  }
+  else{
+    SbyS.pa = decostand(site.by.species, method = "pa")
+    S = ncol(SbyS.pa[,which(colSums(SbyS.pa) > 0)])
+    a.bar = mean(specnumber(SbyS.pa))
+    b.w = round(S/a.bar, 3)
+    return(c(b.w,a.bar,S))
+  }
+}
 
-
-
+beta.w2(doubs$fish)
+beta.w2(doubs$fish, 1,2, pairwise=TRUE)
+beta.w2(doubs$fish, 1,10, pairwise=TRUE)
 
 
 
@@ -111,16 +152,16 @@ a.  Describe how local richness ($\alpha$) and turnover ($\beta$) contribute to 
 b.  Is the fish assemblage at site 1 more similar to the one at site 2 or site 10?
 c.  Using your understanding of the equation $\beta_{w} = \gamma/\alpha$, how would your interpretation of $\beta$ change if we instead defined beta additively (i.e., $\beta = \gamma - \alpha$)?
 
-> ***Answer 3a***:  
-> ***Answer 3b***:  
-> ***Answer 3c***:  
+> ***Answer 3a***:The turnover describes how many times higher the gamma diversity is than the alpha diversity. The relationship between these variables is multiplicative in that the gamma diversity is equal to the alpha diversity multiplied by the beta diversity. In this dataset, the beta diversity value indicates that the gamma diversity is about twice as much as the alpha diversity. Therefore, gamma diversity is 27.   
+> ***Answer 3b***:Site 1 is more similar to site 2 than site 10 because the beta diversity value for these two sites is lower.  
+> ***Answer 3c***:If beta was defined additively, it would no longer reflect how many times more diverse the regional species pool is than the local pool. The beta value for fish in this dataset would be about 14.5 instead of 12.5. Diversity among sites would therefore seem more similar. 
 
 ### The Resemblance Matrix
 In order to quantify $\beta$-diversity for more than two samples, we need to introduce a new primary ecological data structure: the **Resemblance Matrix**. 
 
 ***Question 4***: How do incidence- and abundance-based metrics differ in their treatment of rare species?
 
-> ***Answer 4***:  
+> ***Answer 4***:The incidence based tests account for rare species more so than the abundance based tests. Unlike the incidence based metric, the abundance based metric simply sums the number of each species at each site, which causes the rate species to have less weight in determining similarity among separate sites.  
 
 In the R code chunk below, do the following:  
 
@@ -130,7 +171,18 @@ In the R code chunk below, do the following:
 4. construct a resemblance matrix based on Bray-Curtis Distance ("fish.db").  
 
 ```{r}
+fish <-doubs$fish
+fish <-fish[-8, ] # Remove site 8 from data
+# Calculate Jaccard
+fish.dj <- vegdist(fish,method ="jaccard",binary =TRUE)
+# Calculate Bray-Curtis
+fish.db <- vegdist(fish,method ="bray")
+# Calculate Sørensen
+fish.ds <- vegdist(fish,method ="bray",binary =TRUE)
 
+fish.db
+
+fish.db <- vegdist(fish,method ="bray",upper =TRUE,diag =TRUE)
 
 
 
@@ -145,8 +197,8 @@ In the R code chunk below, do the following:
 a. Does the resemblance matrix (`fish.db`) represent similarity or dissimilarity? What information in the resemblance matrix led you to arrive at your answer? 
 b. Compare the resemblance matrices (`fish.db` or `fish.ds`) you just created. How does the choice of the SÃ¸rensen or Bray-Curtis distance influence your interpretation of site (dis)similarity?
 
-> ***Answer 5a***:  
-> ***Answer 5b***:
+> ***Answer 5a***:The resemblance matrix represents dissimilarity. One can see that the resemblance matrix represents dissimilarity because the values comparing sites 1 and 2, and sites 1 and 10 were equal to the Whittaker's beta diversity values (which measured dissimilarity) for these sites.   
+> ***Answer 5b***:The Sorensen index puts a greater emphasis on the number of shared species or the similarity of two sites compared to the Bray-Curtis index. In other words, the similariy could be inflated in the Sorensen index. 
 
 ## 4) VISUALIZING BETA-DIVERSITY
 
@@ -159,14 +211,13 @@ In the R code chunk below, do the following:
 3. use the `levelplot()` function to create a heatmap of fish abundances in the Doubs River.
 
 ```{r}
+# Define Order of Sites
+order <- rev(attr(fish.db,"Labels"))
 
-
-
-
-
-
-
-
+# Plot Heatmap
+levelplot(as.matrix(fish.db)[, order],aspect ="iso",col.regions =inferno,
+xlab ="Doubs Site",ylab ="Doubs Site",scales = list(cex =0.5),
+main ="Bray-Curtis Distance")
 
 
 ```
@@ -179,20 +230,23 @@ In the R code chunk below, do the following:
 2. plot your cluster analysis (use either `hclust` or `heatmap.2`). 
 
 ```{r} 
+# Perform Cluster Analysis
+fish.ward <- hclust(fish.db,method ="ward.D2")
 
+# Plot Cluster
+par(mar = c(1,5,2,2) +0.1)
+plot(fish.ward,main ="Doubs River Fish: Ward's Clustering",
+ylab ="Squared Bray-Curtis Distance")
 
-
-
-
-
-
-
+gplots::heatmap.2(as.matrix(fish),distfun =function(x) vegdist(x,method ="bray"),
+hclustfun =function(x) hclust(x,method ="ward.D2"),
+col =viridis,trace ="none",density.info ="none")
 
 ```
 
 ***Question 6***: Based on cluster analyses and the introductory plots that we generated after loading the data, develop an ecological hypothesis for fish diversity the `doubs` data set? 
 
-> ***Answer 6***: 
+> ***Answer 6***:The upstream sites have lower diversity and abundance compared to sites further downstream. Perhaps some environmental factor such as stream flow or the presence of a pollutant may have caused this difference. However, based on the data provided, one cannot discern the cause of this hypothesized difference in diversity and abundance. 
 
 ### C.  Ordination
 
@@ -207,11 +261,42 @@ In the R code chunk below, do the following:
 5. identify influential species and add species coordinates to PCoA plot.
 
 ```{r}
+fish.pcoa <- cmdscale(fish.db,eig =TRUE,k =3)
 
+explainvar1 <- round(fish.pcoa$eig[1] / sum(fish.pcoa$eig),3) *100
+explainvar2 <- round(fish.pcoa$eig[2] / sum(fish.pcoa$eig),3) *100
+explainvar3 <- round(fish.pcoa$eig[3] / sum(fish.pcoa$eig),3) *100
+sum.eig <- sum(explainvar1, explainvar2, explainvar3)
 
+dev.off
+# Define Plot Parameters
+par(mar = c(5,5,1,2) +0.1)
+# Initiate Plot
+plot(fish.pcoa$points[ ,1], fish.pcoa$points[ ,2],ylim = c(-0.2,0.7),
+xlab = paste("PCoA 1 (", explainvar1,"%)",sep =""),
+ylab = paste("PCoA 2 (", explainvar2,"%)",sep =""),
+pch =16,cex =2.0,type ="n",cex.lab =1.5,cex.axis =1.2,axes =FALSE)
+# Add Axes
+axis(side =1,labels =T,lwd.ticks =2,cex.axis =1.2,las =1)
+axis(side =2,labels =T,lwd.ticks =2,cex.axis =1.2,las =1)
+abline(h =0,v =0,lty =3)
+box(lwd =2)
+# Add Points & Labels
+points(fish.pcoa$points[ ,1], fish.pcoa$points[ ,2],
+pch =19,cex =3,bg ="gray",col ="gray")
+text(fish.pcoa$points[ ,1], fish.pcoa$points[ ,2],
+labels = row.names(fish.pcoa$points))
 
+# Calculate the relative abundances of each species at each site
+fishREL <-fish 
+for(i in 1:nrow(fish)){
+fishREL[i, ] =fish[i, ] / sum(fish[i, ])
+}
 
-
+# Calculate and add species scores
+fish.pcoa <- add.spec.scores(fish.pcoa,fishREL,method ="pcoa.scores")
+text(fish.pcoa$cproj[ ,1], fish.pcoa$cproj[ ,2],
+labels = row.names(fish.pcoa$cproj),col ="black")
 
 
 
@@ -225,9 +310,14 @@ In the R code chunk below, do the following:
 
 ```{r}
 
+spe.corr <- add.spec.scores(fish.pcoa, fishREL,method ="cor.scores")$cproj
+corrcut <-0.7 # user defined cutoff
+imp.spp <-spe.corr[abs(spe.corr[,1]) >=corrcut | abs(spe.corr[,2]) >=corrcut, ]
+print(imp.spp)
 
-
-
+# Permutation Test for Species Abundances Across Axes
+fit <- envfit(fish.pcoa, fishREL,perm =999)
+print(imp.spp)
 
 
 ```
@@ -237,8 +327,8 @@ In the R code chunk below, do the following:
 a.  Describe the grouping of sites in the Doubs River based on fish community composition.
 b.  Generate a hypothesis about which fish species are potential indicators of river quality.
 
-> ***Answer 7a***:  
-> ***Answer 7b***:   
+> ***Answer 7a***:Based on the PCoA results, the downstream sites were clustered together, and the upstream sites were clustered together. 
+> ***Answer 7b***:Phph, Neba, Rham, Legi, Cyca, Abbr, Acce, Blbj, Alal, Anan are potential indicators of water quality.  
 
 
 ## 5) HYPOTHESIS TESTING
@@ -252,20 +342,28 @@ In the code chunk below, test the hypothesis that fish community composition var
 2. use the multivariate analyses for categorical predictors to describe how fish community structure relates to habitat quality.
 
 ```{r}
+# Create "Factors" vector
+quality <- c(rep("HQ",13), rep("MQ",5), rep("LQ",6), rep("MQ",5))
 
+# Run PERMANOVA with adonis function
+adonis(fish ~quality,method ="bray",permutations =999)
 
+#IndVal Scores 
+indval <- multipatt(fish,cluster =quality,func ="IndVal.g",control = how(nperm=999))
+summary(indval)
 
-
-
-
-
+#Phi Coefficient of Association
+fish.rel <- decostand(fish,method ="total")
+phi <- multipatt(fish.rel,cluster =quality,func ="r.g",control = how(nperm=999))
+summary(phi)
 
 
 ```
 
 ***Question 8***: Based on the PERMANOVA, IndVal, and phi coefficient analyses, what did you learn about the relationship between habitat quality and the fish species composition?
 
-> ***Answer 8***: 
+> ***Answer 8***: The PERMANOVA indicates that community composition varies significantly with water quality. The IndVal test suggests that Teso is an indicator species for the medium quality region, and Satr and Phph are indicator species of the high and middle water quality regions. Further, Alal, Gogo, Ruru, Legi, Baba, Chna, Spbi, Cyca, Acce, Lele, Titi, Chto, Rham, Anan, Eslu, Pefl, Blbj, Scer, Abbr, and Icme are indicators for the low and medium water quality regions. In other words, this analysis provided indicator species for each region. 
+>Similarly, the phi coefficient analysis indicates that Phph, Neba, and Satr have a strong preference for the high quality region. Alal and Ruru have a strong preference for the low quality region, and Anan, Spbi, Chto, and Icme have a strong preference for the medium quality region. Overall, these analyses are suggesting that fish species composition depends on water quality. 
 
 
 ### B.  Multivariate Procedures for Continuous Designs
@@ -277,7 +375,12 @@ In the R code chunk below, do the following:
 2. use a Mantel test to determine if these matrices are correlated, and test the hypothesis that fish assemblages are correlated with stream environmental variables.
 
 ```{r}
+# Define Matrices
+fish.dist <- vegdist(doubs$fish[-8, ],method ="bray")
+env.dist <- vegdist(scale(doubs$env[-8,]),method ="euclid")
 
+#Mantel Test
+mantel(fish.dist,env.dist)
 
 
 
@@ -286,7 +389,7 @@ In the R code chunk below, do the following:
 
 ***Question 9***: What do the results from our Mantel test suggest about fish diversity and stream environmental conditions? How does this relate to your hypothesis about stream quality influencing fish communities?
 
-> ***Answer 9***:  
+> ***Answer 9***:The Mantel test suggests that fish diversity is significantly correlated with stream environmental variables, which supports the hypothesis that stream quality influences fish communities.   
 
 ### ii.  Constrained Ordination
 In the R code chunk below, do the following:  
@@ -300,22 +403,76 @@ In the R code chunk below, do the following:
 7. add vectors that demonstrate the influence of each environmental factor the constrained ordination.   
 
 ```{r}
+# Define environmental matrix
+env.chem <- as.matrix(doubs$env[-8,5:11])
+
+# Perform dbRDA
+doubs.dbrda <- dbrda(fish.db ~., as.data.frame(env.chem))
+ordiplot(doubs.dbrda)
+
+# Model the intercept
+doubs.dbrda.mod0 <- dbrda(fish.db ~1, as.data.frame(env.chem))
+# Note there are no vectors here (we didn't constrain anything)
+# Therefore, the axes suggest this is a simple MDS (i.e., PCoA)
+ordiplot(doubs.dbrda.mod0)
+
+# Model the full model, with all explanatory variables
+doubs.dbrda.mod1 <- dbrda(fish.db ~., as.data.frame(env.chem))
+
+# Step through all combinations of explanatory variables in our model
+# The function returns the model with the lowest AIC value
+doubs.dbrda <- ordiR2step(doubs.dbrda.mod0, doubs.dbrda.mod1,perm.max =200)
 
 
+doubs.dbrda$call
+doubs.dbrda$anova
+ordiplot(doubs.dbrda)
 
+# Permutation tests to evaluate significance
+permutest(doubs.dbrda,permutations =999)
+envfit(doubs.dbrda, env.chem[,c(4,6,7)],perm =999)
 
+# Calculate Explained Variation
+dbrda.explainvar1 <- round(doubs.dbrda$CCA$eig[1] /
+sum(c(doubs.dbrda$CCA$eig, doubs.dbrda$CA$eig)),3) *100
+dbrda.explainvar2 <- round(doubs.dbrda$CCA$eig[2] /
+sum(c(doubs.dbrda$CCA$eig, doubs.dbrda$CA$eig)),3) *100
 
+#Plot the ordination for the selected model.
 
+# Define Plot Parameters
+par(mar = c(5,5,4,4) +0.1)
 
+# Initiate Plot
+plot(scores(doubs.dbrda,display ="wa"),xlim = c(-1.3,1.1),ylim = c(-1.1,2.7),
+xlab = paste("dbRDA 1 (", dbrda.explainvar1,"%)",sep =""),
+ylab = paste("dbRDA 2 (", dbrda.explainvar2,"%)",sep =""),
+pch =16,cex =2.0,type ="n",cex.lab =1.5,cex.axis =1.2,axes =FALSE)
 
+# Add Axes
+axis(side =1,labels =T,lwd.ticks =2,cex.axis =1.2,las =1)
+axis(side =2,labels =T,lwd.ticks =2,cex.axis =1.2,las =1)
+abline(h =0,v =0,lty =3)
+box(lwd =2)
 
+# Add Points & Labels
+points(scores(doubs.dbrda,display ="wa"),
+pch =19,cex =3,bg ="gray",col ="gray")
+text(scores(doubs.dbrda,display ="wa"),
+labels = row.names(scores(doubs.dbrda,display ="wa")))
 
+# Add Environmental Vectors
+vectors <- scores(doubs.dbrda,display ="bp")
 
-
-
-
-
-
+#row.names(vectors) <- rownames(vectors)
+arrows(0,0, vectors[,1], vectors[,2],
+lwd =2,lty =1,length =0.2,col ="red")
+text(vectors[,1], vectors[,2],pos =3,
+labels = row.names(vectors))
+axis(side =3,lwd.ticks=2,cex.axis=1.2,las =1,col ="red",lwd =2.2,
+at = pretty(range(vectors[,1])) *2,labels = pretty(range(vectors[,1])))
+axis(side =4,lwd.ticks=2,cex.axis=1.2,las =1,col ="red",lwd =2.2,
+at = pretty(range(vectors[,2])) *2,labels = pretty(range(vectors[,2])))
 
 
 
@@ -323,7 +480,7 @@ In the R code chunk below, do the following:
 
 ***Question 10***: Based on the constrained ordination, what are the environmental variables (or groups of correlated variables) that seem to be contributing to variation in fish community structure?
 
-> ***Answer 10***: 
+> ***Answer 10***: Oxygen, bdo, and nitrogen appear to contribute to variation in fish community structure according to the constrained ordination. 
 
 ### iii. Variation Partitioning
 In the code chunk below,   
@@ -335,18 +492,398 @@ In the code chunk below,
 5. Partition the variation among sites into the relative importance of space, environment, spatially structured environment, and residuals,
 6. Plot the variation partitioning output to visualize it.  
 ```{r}
+# Remember, our environmental model uses oxy, bdo, and nit and has R2 of 0.53
+doubs.dbrda$anova
 
+# Let's create a matrix model for our environmental data
+env.mod <- model.matrix(~oxy +bdo +nit, as.data.frame(env.chem))[,-1]
 
+# Weight each site by its relative abundance
+rs <- rowSums(fish)/sum(fish)
 
+# Perform PCNM
+doubs.pcnmw <- pcnm(dist(doubs$xy[-8,]),w =rs,dist.ret =T)
+# PCNM can return negative eigenvalues, but only the
+# eigenvectors associated with the positive eigenvalues are meaningful
+doubs.pcnmw$values >0
 
+doubs.space <- as.data.frame(scores(doubs.pcnmw))
+doubs.pcnm.mod0 <- dbrda(fish.db ~1, doubs.space)
+doubs.pcnm.mod1 <- dbrda(fish.db ~., doubs.space)
+step.pcnm <- ordiR2step(doubs.pcnm.mod0, doubs.pcnm.mod1,perm.max =200)
+# Because this is another dbRDA, we could visualize the biplot
+# showing how each vector explains variation across sites
 
+plot(step.pcnm)
 
+# The object `step.pcnm` now contains the selected model.
+step.pcnm$anova
+
+# Construct a spatial model using only the selected PCNM axes.
+space.mod <- model.matrix(~PCNM2 +PCNM3 +PCNM5 +PCNM1 +
+PCNM13 +PCNM16 +PCNM6, doubs.space)[,-1]
+
+# Conduct constrained ordinations
+doubs.total.env <- dbrda(fish.db ~env.mod)
+doubs.total.space <- dbrda(fish.db ~space.mod)
+
+# Construct partial constrained ordinations
+doubs.env.cond.space <- dbrda(fish.db ~env.mod + Condition(space.mod))
+doubs.space.cond.env <- dbrda(fish.db ~space.mod + Condition(env.mod))
+
+# Test for significance of the dbRDA fractions.
+permutest(doubs.env.cond.space,permutations =999)
+permutest(doubs.space.cond.env,permutations =999)
+permutest(doubs.total.env,permutations =999)
+
+permutest(doubs.total.space,permutations =999)
+
+# Using the built-in varpart() function
+doubs.varpart <- varpart(fish.db, env.mod, space.mod)
+doubs.varpart
+par(mar = c(2,2,2,2))
+plot(doubs.varpart)
+text(1,0.25,"Space")
+text(0,0.25,"Env")
+mtext("Variation Partitioning of\nDoubs Fish Diversity",side =3,line =-3)
 
 ```
 
 ***Question 11***: Interpret the variation partitioning results.   
 
-> ***Answer 11***: 
+> ***Answer 11***: 13% of the variation in diversity by site can be attributed to the environment, or unique environmental variation. 37% of the variation in fish diversity can be attributed to space and the environment, or spacially structured environmental variation. Further, 24% of the variation in diverstiy can be attributed to space, or unique spatial variation. 
 
 ## SYNTHESIS
 Load the dataset you are using for your project. Perform an ordination to visualize your dataset.  Using this ordination, develop some hypotheses relevant to $\beta$-diversity and identify the appropriate tools you would use to test them.
+```{r}
+fungi.data <- read.csv("finalprojectdata1csv.csv", sep = ",", header = TRUE)
+
+  
+fungi.data <- fungi.data[,-1]
+
+
+#Bray-Curtis
+fungi.db <- vegdist(fungi.data, method = "bray")
+
+#Sorensen
+fungi.ds <- vegdist(fungi.data, method = "bray", binary = TRUE)
+
+#Bray-Curtis
+fungi.pcoa.db <- cmdscale(fungi.db, eig = TRUE, k = 3)
+
+#Sorensen
+fungi.pcoa.ds <- cmdscale(fungi.ds, eig = TRUE, k = 3)
+
+explainvar1.db <- round(fungi.pcoa.db$eig[1] / sum(fungi.pcoa.db$eig), 3) * 100
+explainvar2.db <- round(fungi.pcoa.db$eig[2] / sum(fungi.pcoa.db$eig), 3) * 100
+explainvar3.db <- round(fungi.pcoa.db$eig[3] / sum(fungi.pcoa.db$eig), 3) * 100
+33
+sum.eig.endo.db <- sum(explainvar1.db, explainvar2.db, explainvar3.db)
+
+#Ordination Plot (Bray-Curtis)
+par(mar = c(5,5,1,2) + 0.1)
+
+#Initiate Plot
+plot(fungi.pcoa.db$points[ ,1], fungi.pcoa.db$points[ ,2],
+xlab = paste("PCoA 1 (", explainvar1.db, "%)", sep = ""),
+ylab = paste("PCoA 2 (", explainvar2.db, "%)", sep = ""),
+pch = 16, cex = 2.0, type = "n", cex.lab = 1.5, cex.axis = 1.2, axes = FALSE, ylim = c(-.4,.4), xlim = c(-.4,.4))
+
+#Add Axes
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+#Add Points and Labels
+points(fungi.pcoa.db$points[,1], fungi.pcoa.db$points[,2],
+pch = 19, cex = 1.5, bg = "gray", col = "blue")
+
+text(fungi.pcoa.db$points[,1], fungi.pcoa.db$points[,2],
+labels = row.names(fungi.pcoa.db$points))
+fungi.pcoa.db <- add.spec.scores(fungi.pcoa.db,fungi.data,method = "pcoa.scores")
+
+#Calculate and add species scores- did not calculate relative abundances because they were already calculated 
+
+text(fungi.pcoa.db$cproj[ ,1], fungi.pcoa.db$cproj[, 2],
+labels = row.names(fungi.pcoa.db$cproj), col = "black")
+
+
+```
+>The Bray-Curtis index would be an appropriate test for our dataset because it has relative abundances of endophyte OTUs at each sampling site. This ordination plot (Bray-Curtis index version) shows most of the points clustered in the middle of the plot. There do not appear to be other groupings of data points on this plot aside from several points towards the bottom of the plot, and several in the top left. The x and y axes of this plot only account for 11.5% and 9% of the variation in the data. Overall, it is difficult to discern whether there are any patterns based on this plot because the points are all clustered together in the middle of the plot. 
+
+```{r}
+#Ordination Plot (Sorensen)
+
+fungi.pcoa.ds <- cmdscale(fungi.ds, eig = TRUE, k = 3)
+
+#Quantify Percent Variation
+explainvar1.ds <- round(fungi.pcoa.ds$eig[1] / sum(fungi.pcoa.ds$eig), 3) * 100
+explainvar2.ds <- round(fungi.pcoa.ds$eig[2] / sum(fungi.pcoa.ds$eig), 3) * 100
+explainvar3.ds <- round(fungi.pcoa.ds$eig[3] / sum(fungi.pcoa.ds$eig), 3) * 100
+sum.eig.fungi.ds <- sum(explainvar1.ds, explainvar2.ds, explainvar3.ds)
+
+
+#Ordination Plot (Sorensen)
+
+#Define Plot Parameters
+par(mar = c(5,5,1,2) + 0.1)
+
+#Inidiate Plot
+plot(fungi.pcoa.ds$points[ ,1], fungi.pcoa.ds$points[ ,2],
+xlab = paste("PCoA 1 (", explainvar1.ds, "%)", sep = ""),
+ylab = paste("PCoA 2 (", explainvar2.ds, "%)", sep = ""),
+pch = 16, cex = 2.0, type = "n", cex.lab = 1.5, cex.axis = 1.2, axes = FALSE, ylim = c(-.4,.4), xlim = c(-.4,.4))
+
+#Axes
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+#Points and Labels
+points(fungi.pcoa.ds$points[,1], fungi.pcoa.ds$points[,2],
+pch = 19, cex = 1.5, bg = "gray", col = "blue")
+
+text(fungi.pcoa.ds$points[,1], fungi.pcoa.ds$points[,2],
+labels = row.names(fungi.pcoa.ds$points))
+
+fungi.pcoa.ds <- add.spec.scores(fungi.pcoa.ds,fungi.data,method = "pcoa.scores")
+text(fungi.pcoa.ds$cproj[ ,1], fungi.pcoa.ds$cproj[, 2],
+labels = row.names(fungi.pcoa.ds$cproj), col = "black")
+
+
+
+```
+>Although the Bray-Curtis index version of the ordination plot seems to be a better fit for our dataset (because it measures relative abundances), I did the Sorensen version as well to see whether any different patterns would arise. However, similar to the other ordination plot, most of the points are clustered in the center of the plot again. The x and y axes on this plot explain 17.5% and 10.3% of the variation in the data, which is greater than that of the first plot.The first plot cut off part of the species name in the top left corner, but it seems that the same species are represented in the top left corner of each plot (Piloderma sphaerosporum).Perhaps other patterns would be visible if it was easier to read the species in the center. Also, it would be helpful to visualize the sites or site numbers on this plot. 
+
+>Based on these ordination plots, it is difficult to develop hypotheses about beta diversity for this data set. Broadly, I hypothesize there will be high beta diversity among communities in different geographic regions. Beta diversity among the different tree species will also be high. In other words, diversity will differ among separate geographic locations and among tree species studied. Analyses and visualizations of beta diversity would test this hypothesis. Data on environmental variables would enable additional tests to be performed, but such data were not included in this data set. 
+
+>I did the cluster analysis for both the Bray-Curtis index and Sorensen index analyses to visualize any potential similarities or differences in diversity by site. 
+
+```{r}
+#Cluster Analysis (Bray-Curtis)
+
+fungi.ward.db <- hclust(fungi.db, method = "ward.D2")
+
+#Plot Cluster
+par(mar = c(1,5,2,2) + 0.1)
+plot(fungi.ward.db, main = "Fungal Endophyte data: Ward's Clustering", ylab = "Squared Bray-Curtis Distance")
+```
+```{r}
+#Cluster Analysis (Sorensen)
+
+fungi.ward <- hclust(fungi.ds, method = "ward.D2")
+
+#Plot Cluster
+par(mar = c(1,5,2,2) + 0.1)
+plot(fungi.ward, main = "Fungal Endophyte data: Ward's Clustering", ylab = "Squared Sorensen's Distance") 
+```
+
+>Based on the figures above, it is difficult to discern whether certain groups appear to be clustered together. Is there a way to make the sites more visible, or reduce the overlap of the sites on this figure? Looking at the cluster analysis from the Bray-Curtis index, the sites clustered together on the far left seem to be from one or two sites because it looks as if the numbers range from 10-20 (which refer to sites from Pinus Contorta in the USA). The sites on the far right seem to include sites 40-50, which include the European Pinus Contorta sites. However, further analyses are needed to determine whether diversity differs among the different geographic locations, and among the three species investigated. Using the Mantel test or a constrained ordination might be helpful in explaining beta diversity, but these data were not available in our dataset. 
+
+>I also thought it might be interesting to examine beta diversity with respect to fungal functional groups (saprotrophs, EMF, parasites, and unknowns). Our dataset has relative abundances for each functional group. Perhaps analyzing beta diversity in terms of functional groups might yield new insights into differences among the different sites and tree species in this study. In the R-chunk below, I redid the ordination plots with the relative abundances of the functional groups at each site. 
+
+```{r}
+fungi2.data <- read.csv("functionalgroupdata.csv", sep = ",", header = TRUE)
+
+fungi2.data <- fungi2.data[,-1]
+fungi2.data <-fungi2.data[,1:4]
+
+#Bray-Curtis
+fungi2.db <- vegdist(fungi2.data, method = "bray")
+
+#Sorensen
+fungi2.ds <- vegdist(fungi2.data, method = "bray", binary = TRUE)
+
+#Bray-Curtis
+fungi2.pcoa.db <- cmdscale(fungi2.db, eig = TRUE, k = 3)
+
+#Sorensen
+fungi2.pcoa.ds <- cmdscale(fungi2.ds, eig = TRUE, k = 3)
+
+explainvar1.db <- round(fungi2.pcoa.db$eig[1] / sum(fungi2.pcoa.db$eig), 3) * 100
+explainvar2.db <- round(fungi2.pcoa.db$eig[2] / sum(fungi2.pcoa.db$eig), 3) * 100
+explainvar3.db <- round(fungi2.pcoa.db$eig[3] / sum(fungi2.pcoa.db$eig), 3) * 100
+33
+sum.eig.fungi2.db <- sum(explainvar1.db, explainvar2.db, explainvar3.db)
+
+#Ordination Plot (Bray-Curtis)
+par(mar = c(5,5,1,2) + 0.1)
+
+#Initiate Plot
+plot(fungi2.pcoa.db$points[ ,1], fungi2.pcoa.db$points[ ,2],
+xlab = paste("PCoA 1 (", explainvar1.db, "%)", sep = ""),
+ylab = paste("PCoA 2 (", explainvar2.db, "%)", sep = ""),
+pch = 16, cex = 2.0, type = "n", cex.lab = 1.5, cex.axis = 1.2, axes = FALSE, ylim = c(-.4,.4), xlim = c(-.4,.4))
+
+#Add Axes
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+#Add Points and Labels
+points(fungi2.pcoa.db$points[,1], fungi2.pcoa.db$points[,2],
+pch = 19, cex = 1.5, bg = "gray", col = "blue")
+
+text(fungi2.pcoa.db$points[,1], fungi2.pcoa.db$points[,2],
+labels = row.names(fungi2.pcoa.db$points))
+fungi2.pcoa.db <- add.spec.scores(fungi2.pcoa.db,fungi2.data,method = "pcoa.scores")
+
+#Calculate and add species scores- did not calculate relative abundances because they were already calculated 
+
+text(fungi2.pcoa.db$cproj[ ,1], fungi2.pcoa.db$cproj[, 2],
+labels = row.names(fungi2.pcoa.db$cproj), col = "black")
+
+
+```
+>This ordination plot does not seem to show any clustering of points as they seem to be scattered throughout. I added points and labels to this plot, but it doesn't show labels for each point. COnsequently, it is difficult to determine which functional groups are clustered together. 
+
+>Further, our data set has site by species matrices for each functional group. In the R-chunk below, I explored the diversity of EMF by site with an ordination plot. 
+```{r}
+fungi3.data <- read.csv("emfdiversitydata.csv", sep = ",", header = TRUE)
+
+fungi3.data <- fungi3.data[,-1]
+
+
+#Bray-Curtis
+fungi3.db <- vegdist(fungi3.data, method = "bray")
+
+#Sorensen
+fungi3.ds <- vegdist(fungi3.data, method = "bray", binary = TRUE)
+
+#Bray-Curtis
+fungi3.pcoa.db <- cmdscale(fungi3.db, eig = TRUE, k = 3)
+
+#Sorensen
+fungi3.pcoa.ds <- cmdscale(fungi3.ds, eig = TRUE, k = 3)
+
+explainvar1.db <- round(fungi3.pcoa.db$eig[1] / sum(fungi3.pcoa.db$eig), 3) * 100
+explainvar2.db <- round(fungi3.pcoa.db$eig[2] / sum(fungi3.pcoa.db$eig), 3) * 100
+explainvar3.db <- round(fungi3.pcoa.db$eig[3] / sum(fungi3.pcoa.db$eig), 3) * 100
+33
+sum.eig.fungi3.db <- sum(explainvar1.db, explainvar2.db, explainvar3.db)
+
+#Ordination Plot (Bray-Curtis)
+par(mar = c(5,5,1,2) + 0.1)
+
+#Initiate Plot
+plot(fungi3.pcoa.db$points[ ,1], fungi3.pcoa.db$points[ ,2],
+xlab = paste("PCoA 1 (", explainvar1.db, "%)", sep = ""),
+ylab = paste("PCoA 2 (", explainvar2.db, "%)", sep = ""),
+pch = 16, cex = 2.0, type = "n", cex.lab = 1.5, cex.axis = 1.2, axes = FALSE, ylim = c(-.4,.4), xlim = c(-.4,.4))
+
+#Add Axes
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+#Add Points and Labels
+points(fungi3.pcoa.db$points[,1], fungi3.pcoa.db$points[,2],
+pch = 19, cex = 1.5, bg = "gray", col = "blue")
+
+text(fungi3.pcoa.db$points[,1], fungi3.pcoa.db$points[,2],
+labels = row.names(fungi3.pcoa.db$points))
+fungi3.pcoa.db <- add.spec.scores(fungi3.pcoa.db,fungi3.data,method = "pcoa.scores")
+
+#Calculate and add species scores- did not calculate relative abundances because they were already calculated 
+
+text(fungi3.pcoa.db$cproj[ ,1], fungi3.pcoa.db$cproj[, 2],
+labels = row.names(fungi3.pcoa.db$cproj), col = "black")
+
+
+
+```
+>Similar to the ordination plots with all fungal OTUS, the ordination plot for EMF OTUs simply has a cluster of points in the middle of the plot. It is difficult to discern whether there are clusters of points, and the x and y axes only account for 13.6% and 7.8% of the total variation. Below I performed a cluster analysis on the emf data to determine whether this visualization would provide other trends/indications about our data set. 
+
+```{r}
+#Cluster Analysis (Bray-Curtis)
+
+fungi3.ward.db <- hclust(fungi3.db, method = "ward.D2")
+
+#Plot Cluster
+par(mar = c(1,5,2,2) + 0.1)
+plot(fungi3.ward.db, main = "EMF data: Ward's Clustering", ylab = "Squared Bray-Curtis Distance")
+
+```
+
+>The cluster analysis for the EMF OTUs looks relatively similar to that of total OTUs. The far left includes sites 46, 47, 49, and 58, which were all from Pinus Contorta trees in Europe.
+
+>I performed another ordination on the saprotroph data below. 
+
+```{r}
+fungi4.data <- read.csv("saprotrophdiversitydata.csv", sep = ",", header = TRUE)
+
+fungi4.data <- fungi4.data[,-1]
+
+
+#Bray-Curtis
+fungi4.db <- vegdist(fungi4.data, method = "bray")
+
+#Sorensen
+fungi4.ds <- vegdist(fungi4.data, method = "bray", binary = TRUE)
+
+#Bray-Curtis
+fungi4.pcoa.db <- cmdscale(fungi4.db, eig = TRUE, k = 3)
+
+#Sorensen
+fungi4.pcoa.ds <- cmdscale(fungi4.ds, eig = TRUE, k = 3)
+
+explainvar1.db <- round(fungi4.pcoa.db$eig[1] / sum(fungi4.pcoa.db$eig), 3) * 100
+explainvar2.db <- round(fungi4.pcoa.db$eig[2] / sum(fungi4.pcoa.db$eig), 3) * 100
+explainvar3.db <- round(fungi4.pcoa.db$eig[3] / sum(fungi4.pcoa.db$eig), 3) * 100
+33
+sum.eig.fungi4.db <- sum(explainvar1.db, explainvar2.db, explainvar3.db)
+
+#Ordination Plot (Bray-Curtis)
+par(mar = c(5,5,1,2) + 0.1)
+
+#Initiate Plot
+plot(fungi4.pcoa.db$points[ ,1], fungi4.pcoa.db$points[ ,2],
+xlab = paste("PCoA 1 (", explainvar1.db, "%)", sep = ""),
+ylab = paste("PCoA 2 (", explainvar2.db, "%)", sep = ""),
+pch = 16, cex = 2.0, type = "n", cex.lab = 1.5, cex.axis = 1.2, axes = FALSE, ylim = c(-.4,.4), xlim = c(-.4,.4))
+
+#Add Axes
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+#Add Points and Labels
+points(fungi4.pcoa.db$points[,1], fungi4.pcoa.db$points[,2],
+pch = 19, cex = 1.5, bg = "gray", col = "blue")
+
+text(fungi4.pcoa.db$points[,1], fungi4.pcoa.db$points[,2],
+labels = row.names(fungi3.pcoa.db$points))
+fungi4.pcoa.db <- add.spec.scores(fungi4.pcoa.db,fungi4.data,method = "pcoa.scores")
+
+#Calculate and add species scores- did not calculate relative abundances because they were already calculated 
+
+text(fungi4.pcoa.db$cproj[ ,1], fungi4.pcoa.db$cproj[, 2],
+labels = row.names(fungi4.pcoa.db$cproj), col = "black")
+
+
+```
+
+>The ordination plot with saprotrophs has the same cluster of points in the middle of the plot. However, there are two other clusters of points, one at the top of the plot (Mycenaceae), and another on the far right (Mycenaceae). Perhaps this species is highly prevalant at specific sites, or at one or two geographic locations. 
+
+```{r}
+#Cluster Analysis (Bray-Curtis)
+
+fungi4.ward.db <- hclust(fungi4.db, method = "ward.D2")
+
+#Plot Cluster
+par(mar = c(1,5,2,2) + 0.1)
+plot(fungi4.ward.db, main = "Saprotroph data: Ward's Clustering", ylab = "Squared Bray-Curtis Distance")
+
+```
+
+>The cluster analysis shows sites shows the Nothofagus sites in a cluster on the far right. This might indicate that diversity is similar at these sites. On the far left, European sites with Pinus Contorta are clustered together, indicating they might have similar diversity values. 
+
+
+```
+
+
