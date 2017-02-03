@@ -1,6 +1,6 @@
 ---
 title: "Assignment: Spatial Diversity"
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Savannah Bennett; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -37,6 +37,8 @@ In the R code chunk below, provide the code to:
 3. Set your working directory to your "*/Week4-Spatial*" folder, and
 
 ```{r, results = 'hide'}
+rm(list=ls())
+getwd()
 
 
 ```
@@ -49,13 +51,53 @@ In the R code chunk below, do the following:
 
 ```{r, results = 'hide', message = FALSE, warning = FALSE} 
 
+install.packages('vegan')
+require(vegan)
+
+# Classes and methods for handling spatial data
+install.packages('sp')
+require(sp)
+
+# Methods for geostatistical analyses
+install.packages('gstat')
+require(gstat)
+
+# Methods to create a RasterLayer object 
+install.packages('raster')
+require(raster)
+
+# For querying the Google server for static maps. 
+install.packages('RgoogleMaps')
+require(RgoogleMaps)
+
+# Tools for manipulating and reading geospatial data 
+install.packages('maptools')
+require(maptools)
+
+# Geospatial Data Abstraction Library
+install.packages('rgdal')
+require(rgdal)
+
+# Similarity measures for community data
+install.packages('simba')
+require(simba)
+
+# Programming tools for plotting data
+install.packages('gplots')
+require(gplots)
+
+
+# Geostatistical package, used here for semivariograms 
+install.packages('rgeos')
+require(rgeos)
+
 
 
 ```
 
 ***Question 1***:  What are the packages `simba`, `sp`, and `rgdal` used for?
 
-> ***Answer 1***:  
+> ***Answer 1***: 'simba' is used to generate similarity measures for community data, while 'sp' is used for geostatistical analyses. 
 
 
 ## 3) LOADING DATA
@@ -67,13 +109,20 @@ In the R code chunk below, use the example in the handout to do the following:
 4. Remove the first column (i.e., site names) from the OTU matrix.
 
 ```{r, results = 'hide', message = FALSE, warning = FALSE} 
+Ponds <- read.table(file = "BrownCoData/20130801_PondDataMod.csv", head = TRUE, sep = ",")
+
+OTUs <- read.csv(file = "BrownCoData/SiteBySpecies.csv", head = TRUE, sep = ",")
+
+otu.names <- names(OTUs) # Get the names of the OTUs
+
+OTUs <- as.data.frame(OTUs[-1]) # remove first column (site names)
 
 
 ```
 
 ***Question 2a***:  How many sites and OTUs are in the SiteBySpecies matrix? 
 
-> ***Answer 2a***:  
+> ***Answer 2a***:  There are 51 sites, and a total of 16,383 OTUs observed, which comprised of 100 different OTUs in this dataset. 
 
 ***Question 2b***:  What is the greatest species richness found among sites?
 
@@ -88,12 +137,23 @@ In the R code chunk below, do the following:
 This map will be centered on Brown County, Indiana (39.1 latitude, -86.3 longitude).
 
 ```{r}
+lats <- as.numeric(Ponds[, 3]) # latitudes (north and south)
+
+lons <- as.numeric(Ponds[, 4]) # longitudes (east and west)
+
+newmap <- GetMap(center = c(39.1,-86.3), zoom = 10,
+destfile = "PondsMap.png", maptype="terrain")
+
+PlotOnStaticMap(newmap, zoom = 10, cex = 2, col = 'blue') # Plot map in RStudio 
+
+PlotOnStaticMap(newmap, lats, lons, cex = 1, pch = 20, col = 'red', add = TRUE)
+
 
 ```
 
 ***Question 3***:  Briefly describe the geographical layout of our sites.
 
-> ***Answer 3***:  
+> ***Answer 3***: According to this map, the sampling sites are clustered into about five groups. It seems like three of those clusters are around Lake Monroe.
 
 
 In the R code chunk below, do the following:  
@@ -102,23 +162,26 @@ In the R code chunk below, do the following:
 
 ```{r}
 # 1. Import TreeCover.tif as a raster file.
-
 # 2. Plot the % tree cover data
-
 # 3. Import water bodies as a shapefile.
-
 # 4. Plot the water bodies around our study area, i.e., Monroe County.
-
 # 5. Convert lat-long data for ponds to georeferenced points.
-
 # 6. Plot the refuge pond locations
+
+Tree.Cover <- raster("TreeCover/TreeCover.tif") # import TreeCover.tif as a raster file.
+plot(Tree.Cover, xlab = 'Longitude', ylab = 'Latitude',
+main = 'Map of geospatial data for % tree cover,\nwater bodies, and sample sites')
+
+Water.Bodies <- readShapeSpatial("water/water.shp") # import water bodies as a shapefile. 
+plot(Water.Bodies, border='cyan', axes = TRUE, add = TRUE)
+Refuge.Ponds <- SpatialPoints(cbind(lons, lats)) # convert lat-long data for ponds to georeferenced point 
+plot(Refuge.Ponds, line='r', col='red', pch = 20, cex = 1.5, add = TRUE)
 
 ```
 
 ***Question 4a***: What are datums and projections?
 
-> ***Answer 4a***:  
-
+> ***Answer 4a***: Datum refers to a model for Earth's shape, while a projection is the way in which coordinates on a sphere are projected onto a 2-D surface.  
 
 ## 5) UNDERSTANDING SPATIAL AUTOCORRELATION
 
@@ -131,7 +194,7 @@ In the R code chunk below, do the following:
 
 ***Question 6***: In your own words, explain what a distance decay pattern is and what it reveals.
 
-> ***Answer 6***:
+> ***Answer 6***: A distance decay pattern is a plot that shows Bray-Curtis similarity by geographic distance. It shows how similar sites are to one another with relation to distance among sites. For example, a distance decay plot might show that similarity among sites decreases when the distance between sites increases. 
 
 In the R code chunk below, do the following:  
 
@@ -140,24 +203,36 @@ Note: You will need to use some of the data transformations within the *semivari
 
 ```{r, results = 'hide', message = FALSE, warning = FALSE}
 # 1) Calculate Bray-Curtis similarity between plots using the `vegdist()` function
-
 # 2) Assign UTM lattitude and longitude data to 'lats' and 'lons' variables
-
 # 3) Calculate geographic distance between plots and assign to the variable 'coord.dist'
-
 # 4) Transform environmental data to numeric type, and assign to variable 'x1'
-
 # 5) Using the `vegdist()` function in `simba`, calculate the Euclidean distance between the plots for environmental variables. Assign the result to the variable 'env.dist'
-
 # 6) Transform all distance matrices into database format using the `liste()` function in `simba`:
-
 # 7) Create a data frame containing similarity of the environment and similarity of community.
-
 # 8) Attach the columns labels 'env' and 'struc' to the dataframe you just made.
-
 # 9) After setting the plot parameters, plot the distance-decay relationships, with regression lines in red.
-
 # 10) Use `simba` to calculates the difference in slope or intercept of two regression lines
+
+#Construct a new dataframe for coordinates
+xy <- data.frame(env = Ponds$TDS, pond.name = Ponds$Sample_ID, lats = Ponds$lat, longs = Ponds$long)
+coordinates(xy) <- ~lats+longs # Transform 'xy' into a spatial points dataframe
+
+# Identify the current projection (i.e., lat-long) and datum (NAD83). 
+proj4string(xy) <- CRS("+proj=longlat +datum=NAD83") 
+# coordinate reference system (CRS)
+# Then, transform the projection and data so we can get meaningful georeferenced distances 
+UTM <- spTransform(xy, CRS("+proj=utm +zone=51 +ellps=WGS84"))
+UTM <- as.data.frame(UTM)
+# coordinate reference 
+
+xy$lats_utm <- UTM[,2] # lattitude data according to UTM
+
+xy$lons_utm <- UTM[,3] # longitude data according to UTM
+
+#coordinates(xy) = ~lats_utm+lons_utm # Step required by the variogram function
+# Examine the semivariance with regards to one of our environmental variables
+env.vgm <- variogram(env~1, data=xy) 
+plot(env.vgm)
 
 ```
 
