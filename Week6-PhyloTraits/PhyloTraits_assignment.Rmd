@@ -1,6 +1,6 @@
 ---
 title: "Phylogenetic Diversity - Traits"
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Savannah Bennett; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -45,6 +45,8 @@ In the R code chunk below, provide the code to:
 4. load all of the required R packages (be sure to install if needed).  
 
 ```{r}
+rm(list=ls())
+getwd()
 
 
 ```
@@ -70,6 +72,28 @@ In the R code chunk below, do the following:
 4. plot the alignment using a grid to visualize rows of sequences.
 
 ```{r}
+package.list <- c("ape", "seqinr", "phylobase", "adephylo", "geiger", "picante", "stats", "RColorBrewer", "caper", "phylolm", "pmc", "ggplot2", "tidyr", "dplyr", "phangorn", "pander")
+for (package in package.list) {
+  if (!require (package, character.only = TRUE, quietly = TRUE)) {
+    install.packages (package)
+    library(package, character.only = TRUE)
+  }
+}
+
+ 
+#Read Alignment File
+read.aln <- read.alignment(file= "./data/p.isolates.afa", format = "fasta")
+
+#Convert Alignment File to DNAbin Object {ape}
+p.DNAbin <- as.DNAbin(read.aln)
+
+#Identify Base Pair Region of 16S rRNA Gene to Visualize
+window <- p.DNAbin[, 0:1000]
+
+#Command to Visualize Sequence Alignment {ape}
+image.DNAbin(window, cex.lab = 0.50)
+
+
 
 
 ```
@@ -80,7 +104,7 @@ Move along the alignment by changing the values in the `window` object.
 a. Approximately how long are our reads?  
 b. What regions do you think would are appropriate for phylogenetic inference and why?  
 
-> ***Answer 2a***:   
+> ***Answer 2a***: ~700  
 > ***Answer 2b***:  
 
 ## 4) MAKING A PHYLOGENETIC TREE
@@ -98,6 +122,27 @@ In the R code chunk below, do the following:
 
 ```{r}
 
+#Distance Matrix with "raw" Model {ape}
+seq.dist.raw <- dist.dna(p.DNAbin, model = "raw", pairwise.deletion = FALSE)
+
+#Neighbor Joining Algorithm to Construct Tree, a 'phylo'
+#Object {ape}
+nj.tree <- bionj(seq.dist.raw)
+
+#Identify Outgroup Sequence
+outgroup <- match("Methanosarcina", nj.tree$tip.label)
+
+#Root the tree {ape}
+nj.rooted <- root(nj.tree, outgroup, resolve.root = TRUE)
+
+#Plot the Rooted Tree {ape}
+par(mar = c(1,1,2,1) + 0.1)
+plot.phylo(nj.rooted, main = "Neighbor Joining Tree", "phylogram",
+  use.edge.length = FALSE, direction = "right", cex = 0.6,
+  label.offset =1)
+add.scale.bar(cex=0.7)
+
+        
 
 ```
 
@@ -117,6 +162,40 @@ In the R code chunk below, do the following:
 4. create a cophylogenetic plot to compare the topologies of the trees.
 
 ```{r}
+#Create distance matrix with "F84" model {ape}
+seq.dist.F84 <- dist.dna(p.DNAbin, model = "F84", pairwise.deletion = FALSE)
+
+#Plot Distances from Different DNA Substitution Models
+par(mar = c(5,5,2,1) + 0.1)
+plot(seq.dist.raw, seq.dist.F84,
+     pch = 20, col = "red", las = 1, asp = 1, xlim = c(0, 0.7), ylim = c(0, 0.7),
+     xlab = "Raw Distance", ylab = "F84 Distance")
+abline(b = 1, a = 0, lty = 2)
+text(0.65, 0.6, "1:1")
+
+#Make Neighbor Joining Trees Using Different DNA Substitution Models {ape}
+raw.tree <- bionj(seq.dist.raw)
+F84.tree <- bionj(seq.dist.F84)
+
+#Define Outgroups
+raw.outgroup <- match("Methanosarcina", raw.tree$tip.label)
+F84.outgroup <- match("Methanosarcina", F84.tree$tip.label)
+
+#Root the Trees {ape}
+raw.rooted <- root(raw.tree, raw.outgroup, resolve.root= TRUE)
+F84.rooted <- root(F84.tree, F84.outgroup, resolve.root= TRUE)
+
+#Make Cophylogenetic Plot {ape}
+layout(matrix(c(1,2), 1, 2), width = c(1,1))
+par(mar = c(1, 1, 2, 0))
+plot.phylo(raw.rooted, type = "phylogram", direction = "right", show.tip.label=TRUE,
+           use.edge.length = FALSE, adj = 0.5, cex = 0.6, label.offset = 2, main = "Raw")
+
+par(mar = c(1, 0, 2, 1))
+plot.phylo(F84.rooted, type="phylogram", direction = "left", show.tip.label=TRUE, 
+           use.edge.length = FALSE, adj = 0.5, cex = 0.6, label.ofset = 2, main = "F84")
+
+
 
 
 ```
@@ -129,6 +208,38 @@ In the R code chunk below, do the following:
 5. be sure to format, add appropriate labels, and customize each plot.
 
 ```{r}
+#Create Distance Matrix for T92
+seq.dist.T92 <- dist.dna(p.DNAbin, model = "F84", pairwise.deletion = FALSE)
+
+#Plot Distances from Different DNA Substitution Models
+par(mar = c(5,5,2,1) + 0.1)
+plot(seq.dist.raw, seq.dist.T92,
+     pch = 20, col = "red", las = 1, asp = 1, xlim = c(0, 0.7), ylim = c(0, 0.7),
+     xlab = "Raw Distance", ylab = "T92 Distance")
+abline(b = 1, a = 0, lty = 2)
+text(0.65, 0.6, "1:1")
+
+#Make Neighbor Joining Trees Using Different DNA Substitution Models {ape}
+F84.tree <- bionj(seq.dist.F84)
+T92.tree <- bionj(seq.dist.T92)
+
+#Define Outgroups
+F84.outgroup <- match("Methanosarcina", F84.tree$tip.label)
+T92.outgroup <- match("Methanosarcina", T92.tree$tip.label)
+
+#Root the Trees {ape}
+F84.rooted <- root(F84.tree, F84.outgroup, resolve.root= TRUE)
+T92.rooted <- root(T92.tree, T92.outgroup, resolve.root= TRUE)
+
+#Make Cophylogenetic Plot {ape}
+layout(matrix(c(1,2), 1, 2), width = c(1,1))
+par(mar = c(1, 1, 2, 0))
+plot.phylo(F84.rooted, type = "phylogram", direction = "right", show.tip.label=TRUE,
+           use.edge.length = FALSE, adj = 0.5, cex = 0.6, label.offset = 2, main = "F84")
+
+par(mar = c(1, 0, 2, 1))
+plot.phylo(T92.rooted, type="phylogram", direction = "left", show.tip.label=TRUE, 
+           use.edge.length = FALSE, adj = 0.5, cex = 0.6, label.ofset = 2, main = "T92")
 
 
 ```
@@ -151,8 +262,13 @@ In the R code chunk below, do the following:
 2. Plot bootstrap support values onto the tree
 
 ```{r}
+#Requires alignment to be read in with as phyDat object
+p.DNAbin.phyDat <- read.phydat("./data/p.isolates.afa", format="fasta", type="DNA")
+fit<- pml(nj.rooted, data=p.DNAbin.phyDat)
 
-
+#Fit tree usign JC69 substitution mode
+fitJC <- optim.pml(fitGTR, model="GTR", optInv=TRUE, optGamma=TRUE,
+                   rearrangement = "NNI", control = pml.control(trace=0))
 ```
 
 ***Question 5***:  
